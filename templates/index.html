@@ -2,66 +2,75 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard QoS - API Monitoring</title>
+    <title>Monitoring QoS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { background-color: #f8f9fa; }
-        .container { margin-top: 50px; background: white; padding: 30px; border-radius: 10px; shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .status-success { color: #198754; font-weight: bold; }
-        .status-error { color: #dc3545; font-weight: bold; }
-    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
+<body class="bg-light">
+<div class="container mt-5">
+    <h1 class="mb-4">📊 Performance & Tests (Point 4 & 5)</h1>
 
-<div class="container shadow-sm">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>📊 Dashboard Supervision API</h1>
-        <span class="badge bg-primary">API : Frankfurter</span>
+    <div class="card shadow-sm mb-5">
+        <div class="card-body">
+            <h5 class="card-title">Évolution de la Latence (en secondes)</h5>
+            <canvas id="latencyChart" height="100"></canvas>
+        </div>
     </div>
 
-    <p class="text-muted">Historique des 20 derniers tests de contrat et de performance (QoS).</p>
-
-    <table class="table table-hover mt-3">
-        <thead class="table-dark">
-            <tr>
-                <th>Date / Heure</th>
-                <th>API testée</th>
-                <th>Statut (Contrat)</th>
-                <th>Latence (QoS)</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for run in runs %}
-            <tr>
-                <td>{{ run.timestamp }}</td>
-                <td>{{ run.api_name }}</td>
-                <td>
-                    {% if "SUCCESS" in run.status %}
-                        <span class="badge bg-success">VALIDE</span>
-                    {% else %}
-                        <span class="badge bg-danger">{{ run.status }}</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <strong>{{ run.latency }}s</strong>
-                    {% if run.latency > 0.5 %}
-                        ⚠️ <small class="text-warning">Lent</small>
-                    {% endif %}
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="4" class="text-center text-muted">Aucun test enregistré pour le moment.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title">Historique des Exécutions</h5>
+            <table class="table table-hover mt-3">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Date d'exécution</th>
+                        <th>Statut</th>
+                        <th>Latence</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for run in runs %}
+                    <tr>
+                        <td>{{ run.timestamp }}</td>
+                        <td>
+                            <span class="badge {{ 'bg-success' if run.status == 'SUCCESS' else 'bg-danger' }}">
+                                {{ run.status }}
+                            </span>
+                        </td>
+                        <td>{{ run.latency }}s</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
-<footer class="text-center mt-4 text-muted">
-    <small>Exécuté via PythonAnywhere & GitHub Actions</small>
-</footer>
+<script>
+    // Préparation des données pour le graphique
+    const labels = [{% for run in chart_data %}"{{ run.timestamp[-8:] }}",{% endfor %}];
+    const dataLatency = [{% for run in chart_data %}{{ run.latency }},{% endfor %}];
 
+    const ctx = document.getElementById('latencyChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Latence de l\'API (s)',
+                data: dataLatency,
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+</script>
 </body>
 </html>
