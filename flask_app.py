@@ -17,22 +17,35 @@ if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
 
 # ... garde tes imports actuels ...
-
-# Définition du chemin vers la base (à mettre en haut du fichier)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "monitoring.db")
-
-# --- TA NOUVELLE PAGE TEST ---
 @app.route('/test')
 def test_dashboard():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    try:
-        # On récupère les résultats des tests pour le dashboard
-        history = conn.execute("SELECT * FROM runs ORDER BY timestamp DESC LIMIT 20").fetchall()
-    except sqlite3.OperationalError:
-        history = []
-    conn.close()
+    history = []
+    history_reversed = []
     
-    # On utilise le template index.html que tu as déjà créé
-    return render_template("index.html", runs=history)
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        # Récupère les 30 derniers résultats
+        history = conn.execute("SELECT * FROM runs ORDER BY timestamp DESC LIMIT 30").fetchall()
+        conn.close()
+        
+        # Inversion pour l'ordre chronologique du graphique
+        history_reversed = list(reversed(history))
+    except Exception as e:
+        print(f"Erreur DB: {e}")
+
+    return render_template("index.html", runs=history, chart_data=history_reversed)
+
+@app.route('/run-manual-test')
+def run_manual_test():
+    try:
+        # Exécute le script de test comme si on le lançait en console
+        subprocess.run(["python3", SCRIPT_PATH], check=True)
+    except Exception as e:
+        print(f"Erreur lors du test manuel: {e}")
+    
+    # Redirige vers le dashboard pour voir le nouveau point
+    return redirect(url_for('test_dashboard'))
+
+if __name__ == "__main__":
+    app.run(debug=True)
