@@ -2,99 +2,116 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Supervision API - Auto 15s</title>
+    <title>Monitoring & Sudoku</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { background-color: #f8f9fa; }
-        .stats-card { border-radius: 15px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .stats-card { border-radius: 15px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        /* Style du Sudoku */
+        #sudoku-grid { border-collapse: collapse; margin: 0 auto; }
+        #sudoku-grid td { width: 40px; height: 40px; border: 1px solid #ddd; padding: 0; }
+        #sudoku-grid input { width: 100%; height: 100%; border: none; text-align: center; font-weight: bold; font-size: 1.2rem; }
+        #sudoku-grid input:focus { background-color: #e9ecef; outline: none; }
+        .fixed-num { background-color: #f1f3f5; color: #495057; }
     </style>
 </head>
-<body class="container py-5">
+<body class="container py-4">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="fw-bold">📊 Monitoring API</h1>
-            <span id="timer-badge" class="badge bg-info text-dark">Prochain test auto : 15s</span>
+    <div class="row">
+        <div class="col-lg-7">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="fw-bold">📊 Monitoring API</h2>
+                <a href="{{ url_for('run_manual_test') }}" class="btn btn-primary shadow-sm">⚡ Tester</a>
+            </div>
+            
+            <div class="card stats-card p-3">
+                <span id="timer-badge" class="badge bg-info text-dark mb-2 w-50">Test auto dans : 15s</span>
+                <canvas id="latencyChart" height="120"></canvas>
+            </div>
+
+            <div class="card stats-card p-3">
+                <table class="table table-sm">
+                    <thead class="table-dark">
+                        <tr><th>Date</th><th>Statut</th><th>Latence</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for run in runs %}
+                        <tr>
+                            <td>{{ run.timestamp[-8:] }}</td>
+                            <td><span class="badge {{ 'bg-success' if run.status == 'SUCCESS' else 'bg-danger' }}">{{ run.status }}</span></td>
+                            <td>{{ run.latency }}s</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
-        <a href="{{ url_for('run_manual_test') }}" class="btn btn-primary btn-lg shadow">⚡ Tester maintenant</a>
-    </div>
 
-    <div class="card stats-card mb-4">
-        <div class="card-body">
-            <h5 class="card-title text-muted">Performance (Latence en secondes)</h5>
-            <canvas id="latencyChart" height="80"></canvas>
-        </div>
-    </div>
-
-    <div class="card stats-card">
-        <div class="card-body">
-            <h5 class="card-title text-muted mb-3">Historique des tests</h5>
-            <table class="table table-hover">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Date d'exécution</th>
-                        <th>Statut Contrat</th>
-                        <th>Latence (QoS)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for run in runs %}
-                    <tr>
-                        <td>{{ run.timestamp }}</td>
-                        <td>
-                            <span class="badge {{ 'bg-success' if run.status == 'SUCCESS' else 'bg-danger' }}">
-                                {{ run.status }}
-                            </span>
-                        </td>
-                        <td><strong>{{ run.latency }}s</strong></td>
-                    </tr>
-                    {% else %}
-                    <tr><td colspan="3" class="text-center">Aucune donnée. Cliquez sur le bouton !</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="col-lg-5">
+            <div class="card stats-card p-4 text-center">
+                <h4 class="mb-3">🧩 Mini Sudoku (7x7)</h4>
+                <p class="small text-muted">Occupez-vous pendant les tests !</p>
+                <table id="sudoku-grid"></table>
+                <button class="btn btn-outline-secondary btn-sm mt-3" onclick="generateSudoku()">Nouvelle Grille</button>
+            </div>
         </div>
     </div>
 
     <script>
-        // 1. DESSIN DU GRAPHIQUE
+        // --- GRAPHIQUE ---
         const labels = [{% for run in chart_data %}"{{ run.timestamp[-8:] }}",{% endfor %}];
         const dataPoints = [{% for run in chart_data %}{{ run.latency }},{% endfor %}];
-
         const ctx = document.getElementById('latencyChart').getContext('2d');
         new Chart(ctx, {
             type: 'line',
             data: {
                 labels: labels,
-                datasets: [{
-                    label: 'Latence (s)',
-                    data: dataPoints,
-                    borderColor: '#0d6efd',
-                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                    fill: true,
-                    tension: 0.3
-                }]
-            },
-            options: { scales: { y: { beginAtZero: true } } }
+                datasets: [{ label: 'Latence (s)', data: dataPoints, borderColor: '#0d6efd', tension: 0.3 }]
+            }
         });
 
-        // 2. AUTOMATISATION 15 SECONDES
+        // --- AUTO-TEST 15s ---
         let secondsLeft = 15;
-        const timerBadge = document.getElementById('timer-badge');
-
         setInterval(() => {
             secondsLeft--;
-            timerBadge.innerText = `Prochain test auto : ${secondsLeft}s`;
-            
+            document.getElementById('timer-badge').innerText = `Prochain test auto dans : ${secondsLeft}s`;
             if (secondsLeft <= 0) {
-                // Lance le test en arrière-plan et rafraîchit la page
-                fetch("{{ url_for('run_manual_test') }}").then(() => {
-                    window.location.reload();
-                });
+                fetch("{{ url_for('run_manual_test') }}").then(() => window.location.reload());
                 secondsLeft = 15;
             }
         }, 1000);
+
+        // --- JEU DE SUDOKU 7x7 ---
+        function generateSudoku() {
+            const grid = document.getElementById('sudoku-grid');
+            grid.innerHTML = '';
+            // Grille simple pré-remplie (décalage cyclique pour 7x7)
+            const solution = [
+                [1, 2, 3, 4, 5, 6, 7], [3, 4, 5, 6, 7, 1, 2], [5, 6, 7, 1, 2, 3, 4],
+                [7, 1, 2, 3, 4, 5, 6], [2, 3, 4, 5, 6, 7, 1], [4, 5, 6, 7, 1, 2, 3],
+                [6, 7, 1, 2, 3, 4, 5]
+            ];
+            
+            for (let r = 0; r < 7; r++) {
+                let row = grid.insertRow();
+                for (let c = 0; c < 7; c++) {
+                    let cell = row.insertCell();
+                    let input = document.createElement('input');
+                    input.type = 'number';
+                    input.min = 1; input.max = 7;
+                    
+                    // On cache environ 60% des nombres pour la difficulté
+                    if (Math.random() > 0.4) {
+                        input.value = solution[r][c];
+                        input.readOnly = true;
+                        input.classList.add('fixed-num');
+                    }
+                    cell.appendChild(input);
+                }
+            }
+        }
+        generateSudoku();
     </script>
 </body>
 </html>
