@@ -3,63 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard API Monitoring</title>
+    <title>Supervision API - Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        .chart-container { position: relative; height:300px; width:100%; }
+        body { background-color: #f4f7f6; }
+        .main-container { max-width: 1000px; margin: 40px auto; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .table thead { background-color: #343a40; color: white; }
+        .status-success { color: #198754; font-weight: bold; }
+        .status-fail { color: #dc3545; font-weight: bold; }
     </style>
 </head>
-<body class="bg-light">
+<body>
 
-<div class="container py-5">
+<div class="container main-container">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h2">📊 Monitoring QoS & Contrat</h1>
-            <p class="text-muted">Suivi en temps réel de l'API Frankfurter</p>
+            <h1 class="fw-bold text-dark">Supervision API</h1>
+            <p class="text-secondary">Dashboard de suivi du contrat et de la QoS</p>
         </div>
-        <a href="{{ url_for('run_manual_test') }}" class="btn btn-primary btn-lg shadow-sm">
+        <a href="{{ url_for('run_manual_test') }}" class="btn btn-primary btn-lg px-4 shadow">
             ⚡ Lancer un test maintenant
         </a>
     </div>
 
-    <div class="card border-0 shadow-sm mb-4">
+    <div class="card mb-4">
         <div class="card-body">
-            <h5 class="card-title mb-3">Latence du service (secondes)</h5>
-            <div class="chart-container">
-                <canvas id="latencyChart"></canvas>
-            </div>
+            <h5 class="card-title mb-4 text-muted">Historique de la latence (s)</h5>
+            <canvas id="latencyChart" style="max-height: 250px;"></canvas>
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm">
+    <div class="card">
         <div class="card-body">
-            <h5 class="card-title mb-3">Historique des exécutions</h5>
+            <h5 class="card-title mb-3 text-muted">Dernières exécutions enregistrées</h5>
             <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead class="table-light">
+                <table class="table table-hover mt-2">
+                    <thead>
                         <tr>
-                            <th>Date d'exécution</th>
-                            <th>Statut</th>
-                            <th>Latence</th>
+                            <th>Date & Heure</th>
+                            <th>Statut du Contrat</th>
+                            <th>Latence (QoS)</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for run in runs %}
                         <tr>
-                            <td>{{ run.timestamp }}</td>
+                            <td class="text-secondary">{{ run.timestamp }}</td>
                             <td>
                                 {% if run.status == 'SUCCESS' %}
-                                    <span class="badge bg-success">SUCCESS</span>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-3">VALIDE</span>
                                 {% else %}
-                                    <span class="badge bg-danger">{{ run.status }}</span>
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3">{{ run.status }}</span>
                                 {% endif %}
                             </td>
-                            <td><strong>{{ run.latency }}s</strong></td>
+                            <td>
+                                <strong>{{ run.latency }}s</strong>
+                            </td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="3" class="text-center text-muted py-4">Aucune donnée disponible. Lancez un test !</td>
+                            <td colspan="3" class="text-center py-4 text-muted">
+                                <i>Aucun test en base de données. Cliquez sur le bouton pour commencer.</i>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -70,34 +77,36 @@
 </div>
 
 <script>
+    // Configuration du graphique Chart.js
     const ctx = document.getElementById('latencyChart').getContext('2d');
     
-    // Extraction des données passées par Flask
+    // On récupère les labels (heures) et les données (latence) depuis Flask
     const labels = [{% for run in chart_data %}"{{ run.timestamp[-8:] }}",{% endfor %}];
-    const dataLatency = [{% for run in chart_data %}{{ run.latency }},{% endfor %}];
+    const dataPoints = [{% for run in chart_data %}{{ run.latency }},{% endfor %}];
 
     new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
             datasets: [{
-                label: 'Temps de réponse (s)',
-                data: dataLatency,
+                label: 'Temps de réponse (secondes)',
+                data: dataPoints,
                 borderColor: '#0d6efd',
-                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                backgroundColor: 'rgba(13, 110, 253, 0.05)',
+                borderWidth: 3,
                 fill: true,
-                tension: 0.4,
-                pointRadius: 4
+                tension: 0.3,
+                pointBackgroundColor: '#0d6efd'
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
             scales: {
-                y: { 
-                    beginAtZero: true,
-                    title: { display: true, text: 'Secondes' }
-                }
+                y: { beginAtZero: true, grid: { display: false } },
+                x: { grid: { display: false } }
+            },
+            plugins: {
+                legend: { display: false }
             }
         }
     });
