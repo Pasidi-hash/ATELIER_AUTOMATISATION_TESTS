@@ -3,7 +3,7 @@
 ------------------------------------------------------------------------------------------------------
 Aujourd’hui, vous allez passer du rôle de développeur au rôle d’ingénieur qualité.  
   
-Internet est rempli d’API publiques : météo, devises, citations, géolocalisation, données statistiques…
+Internet est rempli d’API publiques : météo, devises, citations, géolocalisation ou données statistiques…
 Mais une API, ce n’est pas juste une URL qui répond. C’est un service.
 Et un service doit être fiable, mesurable et surveillé.  
   
