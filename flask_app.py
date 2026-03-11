@@ -18,18 +18,21 @@ if __name__ == "__main__":
 
 # ... garde tes imports actuels ...
 
+# Définition du chemin vers la base (à mettre en haut du fichier)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "monitoring.db")
+
+# --- TA NOUVELLE PAGE TEST ---
 @app.route('/test')
 def test_dashboard():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     try:
-        # On récupère les 30 derniers runs pour avoir assez de points sur le graphique
-        history = conn.execute("SELECT * FROM runs ORDER BY timestamp DESC LIMIT 30").fetchall()
+        # On récupère les résultats des tests pour le dashboard
+        history = conn.execute("SELECT * FROM runs ORDER BY timestamp DESC LIMIT 20").fetchall()
     except sqlite3.OperationalError:
         history = []
     conn.close()
     
-    # On inverse l'ordre pour le graphique (chronologique de gauche à droite)
-    history_reversed = list(reversed(history))
-    
-    return render_template("index.html", runs=history, chart_data=history_reversed)
+    # On utilise le template index.html que tu as déjà créé
+    return render_template("index.html", runs=history)
