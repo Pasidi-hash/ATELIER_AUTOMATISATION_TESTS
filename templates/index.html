@@ -2,75 +2,106 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Monitoring QoS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard API Monitoring</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .chart-container { position: relative; height:300px; width:100%; }
+    </style>
 </head>
 <body class="bg-light">
-<div class="container mt-5">
-    <h1 class="mb-4">📊 Performance & Tests (Point 4 & 5)</h1>
 
-    <div class="card shadow-sm mb-5">
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2">📊 Monitoring QoS & Contrat</h1>
+            <p class="text-muted">Suivi en temps réel de l'API Frankfurter</p>
+        </div>
+        <a href="{{ url_for('run_manual_test') }}" class="btn btn-primary btn-lg shadow-sm">
+            ⚡ Lancer un test maintenant
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
-            <h5 class="card-title">Évolution de la Latence (en secondes)</h5>
-            <canvas id="latencyChart" height="100"></canvas>
+            <h5 class="card-title mb-3">Latence du service (secondes)</h5>
+            <div class="chart-container">
+                <canvas id="latencyChart"></canvas>
+            </div>
         </div>
     </div>
 
-    <div class="card shadow-sm">
+    <div class="card border-0 shadow-sm">
         <div class="card-body">
-            <h5 class="card-title">Historique des Exécutions</h5>
-            <table class="table table-hover mt-3">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Date d'exécution</th>
-                        <th>Statut</th>
-                        <th>Latence</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for run in runs %}
-                    <tr>
-                        <td>{{ run.timestamp }}</td>
-                        <td>
-                            <span class="badge {{ 'bg-success' if run.status == 'SUCCESS' else 'bg-danger' }}">
-                                {{ run.status }}
-                            </span>
-                        </td>
-                        <td>{{ run.latency }}s</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <h5 class="card-title mb-3">Historique des exécutions</h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date d'exécution</th>
+                            <th>Statut</th>
+                            <th>Latence</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for run in runs %}
+                        <tr>
+                            <td>{{ run.timestamp }}</td>
+                            <td>
+                                {% if run.status == 'SUCCESS' %}
+                                    <span class="badge bg-success">SUCCESS</span>
+                                {% else %}
+                                    <span class="badge bg-danger">{{ run.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td><strong>{{ run.latency }}s</strong></td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-4">Aucune donnée disponible. Lancez un test !</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    // Préparation des données pour le graphique
+    const ctx = document.getElementById('latencyChart').getContext('2d');
+    
+    // Extraction des données passées par Flask
     const labels = [{% for run in chart_data %}"{{ run.timestamp[-8:] }}",{% endfor %}];
     const dataLatency = [{% for run in chart_data %}{{ run.latency }},{% endfor %}];
 
-    const ctx = document.getElementById('latencyChart').getContext('2d');
     new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
             datasets: [{
-                label: 'Latence de l\'API (s)',
+                label: 'Temps de réponse (s)',
                 data: dataLatency,
                 borderColor: '#0d6efd',
                 backgroundColor: 'rgba(13, 110, 253, 0.1)',
                 fill: true,
-                tension: 0.3
+                tension: 0.4,
+                pointRadius: 4
             }]
         },
         options: {
+            responsive: true,
+            maintainAspectRatio: false,
             scales: {
-                y: { beginAtZero: true }
+                y: { 
+                    beginAtZero: true,
+                    title: { display: true, text: 'Secondes' }
+                }
             }
         }
     });
 </script>
+
 </body>
 </html>
